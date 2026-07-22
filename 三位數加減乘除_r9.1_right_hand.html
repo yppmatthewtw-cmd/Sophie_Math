@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>三位數加減乘除 r9.1 right hand</title>
+<style>
+  :root{
+    --sky1:#c6e9c4; --sky2:#eaf7e8;   /* 淺綠背景（r7）*/
+    --card:#ffffff; --ink:#25324a; --soft:#6b7d99;
+    --sun:#ffc23c; --coral:#ff7a59;
+    /* 加數A 金黃：個(淺)→百(深) */
+    --y0:#ffd76b; --y1:#f2a93e; --y2:#d9831c;
+    /* 加數B 紫羅蘭 */
+    --p0:#b6a1e6; --p1:#8768cf; --p2:#5f3fb0;
+    /* 進位 珊瑚紅：進十(淺)→進千(深) */
+    --c1:#ff9776; --c2:#ee6146; --c3:#c33a2e;
+    --good:#2fb673; --bad:#ff6b6b; --teal:#2a9d9d;
+    --tube0:#e3eaf6; --tube1:#eef3fb; --tube2:#f6f9fd; --tube3:#fafcff;
+    --shadow:0 10px 24px rgba(31,58,95,.12);
+    --r:22px;
+    --font:"Segoe UI Rounded","Hiragino Maru Gothic ProN",-apple-system,
+           "PingFang TC","PingFang HK","Microsoft JhengHei","Noto Sans TC",sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:var(--font);color:var(--ink);
+    background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 55%,#fbfff8 100%);
+    min-height:100vh;display:flex;justify-content:center;padding:14px;}
+  .wrap{width:100%;max-width:1000px;}
+
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+  .title{font-size:1.18rem;font-weight:800;display:flex;align-items:center;gap:6px;}
+  .title small{display:block;font-size:.55rem;font-weight:600;color:var(--soft);letter-spacing:2px;}
+  /* 計分（答對/答錯）*/
+  /* 成績板：側欄直向卡（req 5 / r5 移位省空間）*/
+  .scores{display:flex;flex-direction:column;gap:2px;background:var(--card);border-radius:var(--r);padding:9px 11px;box-shadow:var(--shadow);margin-bottom:12px;}
+  .sc{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:4px;padding:3px 7px;border-radius:9px;}
+  .sc.on{background:#e6f6e6;}
+  .sc .nm{font-size:.58rem;font-weight:800;color:var(--soft);}
+  .sc .vals{font-size:.9rem;font-weight:800;}
+  .sc .vals .ok{color:var(--good);} .sc .vals .no{color:var(--bad);}
+  .sc .vals em{font-style:normal;font-size:.58rem;font-weight:800;color:var(--soft);margin:0 5px 0 1px;}
+
+  /* 操作分行（r8）：加／減／乘／除 各自一行 */
+  .opgroups{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+  .oprow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#ffffff77;border-radius:14px;padding:5px 7px;box-shadow:var(--shadow);}
+  .oplab{font-size:.74rem;font-weight:800;color:var(--soft);min-width:52px;padding-left:4px;}
+
+  .controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+  .tab{border:none;background:#ffffffcc;color:var(--soft);font-family:inherit;font-weight:800;font-size:.86rem;padding:9px 14px;border-radius:13px;cursor:pointer;box-shadow:var(--shadow);transition:transform .1s,background .15s,color .15s;}
+  .tab.on{background:var(--ink);color:#fff;}
+  .tab:active{transform:scale(.95);}
+  .pill{border:none;background:#ffffffcc;color:var(--soft);font-family:inherit;font-weight:800;font-size:.78rem;padding:7px 9px;border-radius:12px;cursor:pointer;box-shadow:var(--shadow);}
+  .pill.sz.on{background:var(--teal);color:#fff;}
+  .ptlab{font-size:.72rem;font-weight:800;color:var(--soft);margin-left:4px;}
+  .icon-btn{border:none;background:#ffffffcc;border-radius:12px;width:38px;height:34px;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
+
+  /* 慣用手模式（r9.1）：可切換左／右手 —— 右手＝鍵盤喺右邊，左手＝鍵盤喺左邊 */
+  .main{display:flex;gap:12px;align-items:flex-start;flex-direction:row;}
+  .main.hand-right{flex-direction:row;}         /* 鍵盤喺右 */
+  .main.hand-left{flex-direction:row-reverse;}  /* 鍵盤喺左 */
+  .board{flex:1 1 auto;min-width:0;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);position:relative;
+    padding:26px 40px 14px;overflow-x:auto;
+    --scale:1;--wcell:calc(2.4rem*var(--scale));--bcell:calc(1.12rem*var(--scale));--opw:calc(1.6rem*var(--scale));--cgap:calc(10px*var(--scale));}
+  .side{flex:0 0 250px;}
+  @media(max-width:800px){.main.hand-left,.main.hand-right{flex-direction:column;}.side{flex:1 1 auto;width:100%;}}
+
+  .p1lab,.p2lab{position:absolute;left:9px;font-size:1rem;font-weight:800;color:var(--soft);z-index:5;}
+  .p1lab{top:7px;} .p2lab{top:0;display:none;}
+  .prompt{font-weight:800;font-size:.88rem;text-align:center;margin:0 0 8px;color:var(--coral);}
+  .boardwrap{display:flex;justify-content:center;}
+  .gridwrap{position:relative;display:inline-block;}
+
+  .guides{position:absolute;inset:0;display:grid;grid-template-rows:1fr;z-index:0;pointer-events:none;}
+  .gsp{}
+  .tube{border:1.6px solid #d4deee;border-radius:9px;margin:0 1px;}
+  .tube.t0{background:var(--tube0);} .tube.t1{background:var(--tube1);} .tube.t2{background:var(--tube2);} .tube.t3{background:var(--tube3);}
+  .tube.act{border-color:var(--coral);border-width:2.4px;box-shadow:0 0 0 2px #ff7a5922;}
+
+  .bgrid{position:relative;z-index:1;display:grid;align-items:end;justify-items:center;font-variant-numeric:tabular-nums;}
+  .bspace{}
+  .bcell{align-self:end;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;width:100%;min-height:var(--bcell);}
+  .brick{width:calc(var(--wcell)*0.82);height:var(--bcell);border-radius:4px;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:calc(var(--bcell)*0.6);border:1px solid rgba(0,0,0,.14);animation:drop .22s ease;color:#fff;}
+  @keyframes drop{from{transform:translateY(-7px) scale(.85);opacity:0;}to{transform:none;opacity:1;}}
+  .brick.y0{background:var(--y0);color:#6a4a00;} .brick.y1{background:var(--y1);color:#5a3800;} .brick.y2{background:var(--y2);color:#fff;}
+  .brick.p0{background:var(--p0);} .brick.p1{background:var(--p1);} .brick.p2{background:var(--p2);}
+  .brick.c1{background:var(--c1);color:#7a1e00;} .brick.c2{background:var(--c2);} .brick.c3{background:var(--c3);}
+  .brick{box-shadow:inset 1px 1px 0 rgba(255,255,255,.4),inset -1px -1px 0 rgba(0,0,0,.16);}
+  .brick.popin{animation:popin .44s cubic-bezier(.3,1.4,.5,1);}
+  @keyframes popin{from{transform:scale(0);opacity:.2;}to{transform:none;opacity:1;}}
+  /* 減法：借位後被拎走（減走）嘅方塊 —— 劃線（r8）*/
+  .brick.strike{position:relative;opacity:.42;}
+  .brick.strike::after{content:'';position:absolute;left:-8%;right:-8%;top:47%;height:2.6px;background:#c0392b;transform:rotate(-16deg);border-radius:2px;}
+
+  /* === 減法「借十」寫式（劃走＋細字）r9.1 === */
+  /* 上方細字（借後嘅新值）：紅色，逐行往上疊，舊值再劃走 */
+  .subanno{height:calc(var(--wcell)*0.62);display:flex;align-items:flex-end;justify-content:center;width:100%;}
+  .subanno .av{position:relative;font-weight:800;line-height:1;color:#d0021b;font-size:calc(1.05rem*var(--scale));font-variant-numeric:tabular-nums;
+    animation:annopop .35s cubic-bezier(.3,1.5,.5,1);}
+  @keyframes annopop{from{transform:scale(.2) translateY(6px);opacity:0;}to{transform:none;opacity:1;}}
+  .subanno .av.struck{opacity:.5;}
+  .subanno .av.struck::after{content:'';position:absolute;left:-14%;right:-14%;top:48%;height:2.6px;background:#d0021b;transform:rotate(-16deg);border-radius:2px;}
+  /* 被減數（A）數字被劃走 —— 紅色斜線 */
+  .wcell.a.struck{position:relative;}
+  .wcell.a.struck::after{content:'';position:absolute;left:8%;right:8%;top:46%;height:3.2px;background:#d0021b;transform:rotate(-15deg);border-radius:2px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.55);animation:strikein .3s ease;}
+  @keyframes strikein{from{transform:rotate(-15deg) scaleX(0);}to{transform:rotate(-15deg) scaleX(1);}}
+  /* 而家要做嘅一格（劃走 or 輸入）：更加鮮明地閃住 */
+  @keyframes brightpulse{
+    0%,100%{box-shadow:0 0 0 3px #ffd24d,0 0 14px 4px rgba(255,122,89,.55);}
+    50%{box-shadow:0 0 0 6px #ffb300,0 0 30px 12px rgba(255,122,89,.9);}}
+  .flashact{animation:brightpulse .72s ease-in-out infinite;position:relative;z-index:6;border-radius:11px;}
+  /* 可撳嘅「劃走」目標格 */
+  .wcell.a.crossgo{cursor:pointer;outline:3px solid #ff7a59;outline-offset:1px;}
+  .wcell.a.crossgo::before{content:'✂ 撳我';position:absolute;left:50%;top:-1.05em;transform:translateX(-50%);
+    font-size:calc(.5rem*var(--scale));font-weight:800;color:#ff7a59;white-space:nowrap;}
+  .carryph{width:calc(var(--wcell)*0.82);height:var(--bcell);border-radius:4px;border:2px dashed var(--c1);background:#fff2ee;}
+  .carryph.d2{border-color:var(--c2);} .carryph.d3{border-color:var(--c3);}
+  .carryph.flash{animation:phflash .7s ease infinite;}
+  @keyframes phflash{0%,100%{opacity:.4;box-shadow:0 0 0 0 rgba(255,151,118,0);}50%{opacity:1;box-shadow:0 0 0 4px rgba(255,151,118,.35);}}
+  .rest{border-radius:6px;padding:2px;border:2px dashed #b79ae6;background:#f6f1fc;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;min-height:calc(var(--bcell)*0.9);min-width:calc(var(--wcell)*0.5);}
+  .rest .caprest{position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:3px;white-space:nowrap;font-size:calc(var(--bcell)*0.58);font-weight:800;color:var(--p1);}
+  /* 一個十：夠十向左移約 30%（req 2）*/
+  .tengroup{display:flex;flex-direction:column;align-items:center;gap:2px;padding:2px;border-radius:6px;
+    border:2px solid var(--sun);background:#fff9e6;box-shadow:0 0 0 2px #ffc23c33;position:relative;z-index:4;
+    transform:translateX(calc(var(--wcell)*-0.3));transition:transform .42s cubic-bezier(.4,0,.2,1),opacity .42s;}
+  .tengroup.ready{cursor:pointer;border-color:var(--c1);animation:tenpulse 1s ease infinite;}
+  @keyframes tenpulse{0%,100%{box-shadow:0 0 0 2px #ff977666;}50%{box-shadow:0 0 0 7px #ff977622;}}
+  .tengroup.flying{transform:translateX(calc(var(--wcell)*-1)) scaleY(.13);opacity:0;transform-origin:center bottom;}
+  .tengroup .cap10{position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:3px;white-space:nowrap;font-size:calc(var(--bcell)*0.58);font-weight:800;color:#c99000;}
+  .tenmark{width:100%;display:flex;align-items:center;gap:3px;margin:1px 0;}
+  .tenmark::before{content:"";flex:1;border-top:2px dashed var(--coral);}
+  .tenmark span{font-size:calc(var(--bcell)*0.56);font-weight:800;color:var(--coral);}
+
+  /* 乘法 2A / 2B 部分積方塊面板 */
+  .mulwrap{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-start;}
+  .mulcharts{display:flex;flex-direction:column;gap:6px;align-items:center;padding-top:4px;
+    --mcell:calc(1.55rem*var(--scale));--mbc:calc(1.05rem*var(--scale));}
+  .mplus{font-weight:800;font-size:1.2rem;color:var(--soft);line-height:.6;}
+  .mchart{background:#f7fafe;border:1.6px solid #e2e9f3;border-radius:13px;padding:6px 9px 8px;box-shadow:var(--shadow);}
+  .mclab{font-size:.66rem;font-weight:800;color:var(--soft);margin-bottom:3px;text-align:center;white-space:nowrap;}
+  .mclab b{color:#fff;background:var(--teal);border-radius:7px;padding:1px 6px;margin-right:3px;font-size:.72rem;}
+  .mchead{display:grid;gap:0 4px;margin-bottom:2px;}
+  .mph{font-size:calc(var(--mbc)*0.5);font-weight:800;color:#9fb0c4;text-align:center;}
+  .mcgrid{display:grid;gap:2px 4px;align-items:end;justify-items:center;min-height:calc(var(--mbc)*1.2);}
+  .mcol{display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;min-height:var(--mbc);}
+  .mbrick{width:var(--mbc);height:var(--mbc);border-radius:3px;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:calc(var(--mbc)*0.55);border:1px solid rgba(0,0,0,.14);color:#fff;animation:drop .2s ease;
+    box-shadow:inset 1px 1px 0 rgba(255,255,255,.4),inset -1px -1px 0 rgba(0,0,0,.16);}
+  .mbrick.y0{background:var(--y0);color:#6a4a00;} .mbrick.y1{background:var(--y1);color:#5a3800;} .mbrick.y2{background:var(--y2);}
+  .mbrick.p0{background:var(--p0);} .mbrick.p1{background:var(--p1);} .mbrick.p2{background:var(--p2);}
+  .gcap{grid-column:1 / -1;justify-self:stretch;text-align:center;font-weight:800;font-size:.88rem;color:var(--ink);padding:6px 4px 2px;line-height:1.4;}
+  .gcap b{color:var(--coral);}
+  .hbar{grid-column:1 / -1;justify-self:stretch;position:relative;height:6px;}
+  .hbar::before{content:"";position:absolute;top:50%;left:-16px;right:-16px;height:4px;transform:translateY(-50%);background:#1a1a1a;border-radius:2px;}
+  .hbar.sep{margin:4px 0 2px;}
+
+  .ph{width:100%;display:flex;align-items:center;justify-content:center;height:calc(1.5rem*var(--scale));}
+  .ph.big{font-size:calc(1.25rem*var(--scale));font-weight:900;color:var(--ink);letter-spacing:1px;}
+  .ph.big.ac{color:var(--coral);}
+
+  .wcell{height:var(--wcell);display:flex;align-items:center;justify-content:center;font-size:calc(1.4rem*var(--scale));font-weight:800;line-height:1;width:100%;}
+  .wcell.cry{height:calc(var(--wcell)*0.6);align-items:flex-end;}
+  .wcell.op{font-size:calc(1.25rem*var(--scale));color:var(--soft);}
+  .wcell.op.big{color:var(--ink);}
+  .tile{border-radius:11px;border:1px solid rgba(0,0,0,.12);color:#fff;box-shadow:inset 2px 2px 0 rgba(255,255,255,.34),inset -2px -2px 0 rgba(0,0,0,.2);}
+  .wcell.a.y0{background:var(--y0);color:#6a4a00;} .wcell.a.y1{background:var(--y1);color:#5a3800;} .wcell.a.y2{background:var(--y2);}
+  .wcell.a.p0{background:var(--p0);} .wcell.a.p1{background:var(--p1);} .wcell.a.p2{background:var(--p2);}
+  .wcell.a.hd{background:transparent;color:transparent;box-shadow:none;border:none;}
+  /* 乘法：A 行白底（req 2）*/
+  .wcell.a.wt{background:#fff;color:var(--ink);border:2px solid #dce4f0;box-shadow:none;}
+  /* 乘法 2A/2B 內嵌帶（同欄模板 → 數位自動對齊）*/
+  .ppband{grid-column:1 / -1;justify-self:stretch;background:#f7fafe;box-shadow:0 0 0 1.6px #e2e9f3;border-radius:13px;margin:3px 0;padding:4px 0 6px;}
+  .ppgrid{display:grid;align-items:end;justify-items:center;}
+  .pblab{grid-column:1 / -1;justify-self:start;font-size:.68rem;font-weight:800;color:var(--soft);padding:2px 8px 5px;white-space:nowrap;}
+  .pblab b{color:#fff;background:var(--teal);border-radius:7px;padding:1px 7px;margin-right:4px;}
+  /* 相加中嘅數位：綠框（green box）*/
+  .bcell.grnbox{outline:2.5px solid #3fae5f;outline-offset:2px;border-radius:8px;background:#f0fbf3;}
+  .crywrap{display:flex;justify-content:center;align-items:flex-end;width:100%;}
+  .slot{font-family:inherit;font-weight:800;cursor:pointer;border-radius:11px;padding:0;width:100%;transition:transform .1s,box-shadow .15s,background .15s,border-color .15s;}
+  .slot.as{height:var(--wcell);font-size:calc(1.4rem*var(--scale));background:#fff7e6;border:3px dashed var(--sun);color:var(--ink);}
+  .slot.as.empty{color:#c9b27a;}
+  /* 答對＝綠色（req 6）*/
+  .slot.as.good{background:var(--good);border:3px solid #26a367;color:#fff;
+    box-shadow:inset 2px 2px 0 rgba(255,255,255,.3),inset -2px -2px 0 rgba(0,0,0,.2);}
+  .slot.cy{height:calc(var(--wcell)*0.6);width:calc(var(--wcell)*0.6);font-size:calc(1rem*var(--scale));background:#fff2ee;border:2.5px dashed var(--c1);color:var(--c1);}
+  .slot.cy.d2{border-color:var(--c2);color:var(--c2);background:#fdeeeb;} .slot.cy.d3{border-color:var(--c3);color:var(--c3);}
+  .slot.cy.good{background:var(--c1);border:2.5px solid #e0563a;color:#7a1e00;box-shadow:inset 2px 2px 0 rgba(255,255,255,.35),inset -2px -2px 0 rgba(0,0,0,.16);}
+  .slot.cy.d2.good{background:var(--c2);border-color:#c94a30;color:#fff;} .slot.cy.d3.good{background:var(--c3);border-color:#a52e24;color:#fff;}
+  /* 小步 mark（細字）：紅＝乘法進位、藍＝其他小步、黃＝加總進位（req 2/3）*/
+  .mkrow{height:calc(var(--wcell)*0.5);display:flex;align-items:flex-end;justify-content:center;gap:1px;width:100%;}
+  .slot.mk,.mky{width:calc(var(--wcell)*0.32);height:calc(var(--wcell)*0.42);font-size:calc(.72rem*var(--scale));
+    border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:800;position:relative;flex:0 0 auto;}
+  .slot.mk.mkr{background:#fff2ee;border:2px dashed var(--c2);color:var(--c2);}
+  .slot.mk.mkb{background:#eef4fd;border:2px dashed #3b6fd6;color:#3b6fd6;}
+  .slot.mk.good{color:#fff;border-style:solid;}
+  .slot.mk.mkr.good{background:var(--c2);border-color:#c94a30;}
+  .slot.mk.mkb.good{background:#3b6fd6;border-color:#2c56ab;}
+  .mky{background:#ffe45c;border:2px solid #d9b900;color:#6a5500;}
+  .mk-x{opacity:.55;}
+  .mk-x::after{content:'';position:absolute;left:-12%;right:-12%;top:48%;height:2.6px;background:#3b6fd6;transform:rotate(-20deg);border-radius:2px;}
+  .slot.active{border-style:solid;border-color:var(--coral);box-shadow:0 0 0 4px #ff7a5933;transform:scale(1.05);background:#fff;}
+  .slot.cy.active{background:#fff;animation:cyflash .7s ease infinite;}
+  @keyframes cyflash{0%,100%{box-shadow:0 0 0 3px #ff977644;}50%{box-shadow:0 0 0 8px #ff977615;}}
+  .slot.bad{background:#ffeaea!important;border:3px solid var(--bad)!important;color:var(--bad)!important;animation:shake .4s;}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+  /* 除法：長除法直式（r8）*/
+  .divwrap{width:100%;display:flex;flex-direction:column;align-items:center;}
+  .divouter{display:flex;align-items:flex-start;gap:10px;justify-content:center;margin-top:6px;}
+  .divB{background:var(--teal);color:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;font-weight:800;
+    font-size:calc(1.3rem*var(--scale));min-width:calc(var(--wcell)*0.75);height:calc(var(--wcell)*0.75);
+    margin-top:calc(var(--wcell) + 4px);box-shadow:inset 2px 2px 0 rgba(255,255,255,.25),inset -2px -2px 0 rgba(0,0,0,.15);}
+  .divright{display:flex;flex-direction:column;}
+  .divrow{display:flex;gap:var(--cgap);}
+  .dcell{width:var(--wcell);min-height:calc(var(--wcell)*0.86);display:flex;align-items:center;justify-content:center;
+    font-size:calc(1.3rem*var(--scale));font-weight:800;}
+  .dcell.small{font-size:calc(.92rem*var(--scale));color:var(--soft);justify-content:flex-end;min-height:calc(var(--wcell)*0.55);}
+  .dcell.wide{width:calc(var(--wcell)*2 + var(--cgap));justify-content:flex-start;color:var(--teal);font-weight:800;font-size:calc(.96rem*var(--scale));min-height:calc(var(--wcell)*0.6);}
+  .divbracket{border-top:3px solid var(--ink);border-left:3px solid var(--ink);padding:4px 8px 8px 10px;border-radius:0 0 0 10px;margin-top:2px;}
+
+  .msg{text-align:center;font-weight:800;font-size:1rem;min-height:22px;margin:10px 4px 0;line-height:1.4;}
+  .msg.good{color:var(--good);} .msg.bad{color:var(--coral);} .msg.tip{color:var(--soft);}
+
+  .answer-pane{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px 12px 12px;position:relative;}
+  /* 常規數字鍵盤：789 / 456 / 123 / 0（req 4）*/
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+  .num.zero{grid-column:1 / 3;}
+  .num{border:none;font-family:inherit;font-weight:800;font-size:1.3rem;background:#f2f6fc;color:var(--ink);border-radius:14px;padding:15px 0;cursor:pointer;transition:transform .08s,background .12s;}
+  .num:active{transform:scale(.9);background:var(--sun);}
+  .actions{display:flex;gap:8px;}
+  .btn{flex:1;border:none;font-family:inherit;font-weight:800;font-size:1rem;padding:14px 0;border-radius:14px;cursor:pointer;transition:transform .1s;}
+  .btn:active{transform:scale(.96);}
+  .btn.hint{background:#fff3cf;color:#9a6b00;}
+  .btn.clear{background:#ffe7df;color:var(--coral);}
+  .btn.next{background:var(--good);color:#fff;}
+  .hint{text-align:center;font-size:.72rem;color:var(--soft);margin:10px 2px 0;line-height:1.7;}
+  .hint i{display:inline-block;width:.8em;height:.8em;border-radius:3px;vertical-align:-1px;margin-right:2px;}
+
+  .confetti{position:fixed;top:-10px;width:11px;height:14px;border-radius:3px;z-index:50;pointer-events:none;animation:fall 1.5s linear forwards;}
+  @keyframes fall{to{transform:translateY(105vh) rotate(540deg);opacity:0;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">🟦 三位數加減乘除 r9.1<small>可切換左／右手鍵盤．減法借位寫式</small></div>
+  </header>
+
+  <div class="opgroups">
+    <div class="oprow">
+      <span class="oplab">➕ 加法</span>
+      <button class="tab on" data-mode="add2">雙位加雙位</button>
+      <button class="tab" data-mode="add3">三位加三位</button>
+    </div>
+    <div class="oprow">
+      <span class="oplab">➖ 減法</span>
+      <button class="tab" data-mode="sub2">雙位減單位</button>
+      <button class="tab" data-mode="sub3">三位減雙位</button>
+    </div>
+    <div class="oprow">
+      <span class="oplab">✖️ 乘法</span>
+      <button class="tab" data-mode="mul1">雙位x單位數</button>
+      <button class="tab" data-mode="mul3x1">三位x單位數</button>
+      <button class="tab" data-mode="mul2">雙位x雙位數</button>
+    </div>
+    <div class="oprow">
+      <span class="oplab">➗ 除法</span>
+      <button class="tab" data-mode="div1">雙位除單位</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="ptlab">大小</span>
+    <button class="pill sz on" data-sz="1">1×</button>
+    <button class="pill sz" data-sz="1.25">1.25×</button>
+    <button class="pill sz" data-sz="1.5">1.5×</button>
+    <button class="pill sz" data-sz="2">2×</button>
+    <button class="pill" id="handSwap" title="切換左／右手鍵盤">🖐️ 鍵盤喺右</button>
+    <button class="icon-btn" id="sound" title="聲音">🔊</button>
+  </div>
+
+  <div class="main hand-right" id="main">
+    <div class="board" id="board">
+      <div class="p1lab">①</div>
+      <div class="p2lab" id="p2lab">②</div>
+      <p class="prompt" id="prompt"></p>
+      <div class="boardwrap"><div id="canvas"></div></div>
+      <p class="msg" id="msg"></p>
+    </div>
+    <div class="side">
+      <div class="scores" id="scores">
+        <div class="sc" data-m="add2"><span class="nm">1-雙位加：</span><span class="vals"><b class="ok" id="ok-add2">0</b><em>對</em><b class="no" id="no-add2">0</b><em>錯</em></span></div>
+        <div class="sc" data-m="add3"><span class="nm">2-三位加：</span><span class="vals"><b class="ok" id="ok-add3">0</b><em>對</em><b class="no" id="no-add3">0</b><em>錯</em></span></div>
+        <div class="sc" data-m="sub2"><span class="nm">3-雙減單：</span><span class="vals"><b class="ok" id="ok-sub2">0</b><em>對</em><b class="no" id="no-sub2">0</b><em>錯</em></span></div>
+        <div class="sc" data-m="sub3"><span class="nm">4-三減雙：</span><span class="vals"><b class="ok" id="ok-sub3">0</b><em>對</em><b class="no" id="no-sub3">0</b><em>錯</em></span></div>
+        <div class="sc" data-m="mul1"><span class="nm">5-雙單乘：</span><span class="vals"><b class="ok" id="ok-mul1">0</b><em>對</em><b class="no" id="no-mul1">0</b><em>錯</em></span></div>
+        <div class="sc" data-m="mul3x1"><span class="nm">6-三單乘：</span><span class="vals"><b class="ok" id="ok-mul3x1">0</b><em>對</em><b class="no" id="no-mul3x1">0</b><em>錯</em></span></div>
+        <div class="sc" data-m="mul2"><span class="nm">7-雙雙乘：</span><span class="vals"><b class="ok" id="ok-mul2">0</b><em>對</em><b class="no" id="no-mul2">0</b><em>錯</em></span></div>
+        <div class="sc" data-m="div1"><span class="nm">8-雙除單：</span><span class="vals"><b class="ok" id="ok-div1">0</b><em>對</em><b class="no" id="no-div1">0</b><em>錯</em></span></div>
+      </div>
+      <div class="answer-pane">
+        <div class="pad" id="pad"></div>
+        <div class="actions">
+          <button class="btn hint" id="hintBtn">💡 提示</button>
+          <button class="btn clear" id="clear">⌫ 清除</button>
+          <button class="btn next" id="next">下一題 →</button>
+        </div>
+        <p class="hint" id="hint"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var MODES={add2:'雙位加雙位',add3:'三位加三位',sub2:'雙位減單位',sub3:'三位減雙位',
+    mul1:'雙位x單位數',mul3x1:'三位x單位數',mul2:'雙位x雙位數',div1:'雙位除單位'};
+  var SCK=['add2','add3','sub2','sub3','mul1','mul3x1','mul2','div1'];
+  var state={mode:'add2',scale:1,sound:true,hand:'right',q:null,solved:false,animating:false,justCarried:-1,wrongQ:false,
+    score:{add2:{ok:0,no:0},add3:{ok:0,no:0},sub2:{ok:0,no:0},sub3:{ok:0,no:0},
+      mul1:{ok:0,no:0},mul3x1:{ok:0,no:0},mul2:{ok:0,no:0},div1:{ok:0,no:0}}};
+  var last={}, audioCtx=null, chirpTimers=[], retryTimer=null;
+  var $=function(id){return document.getElementById(id);};
+  function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+  function dig(n,p){return Math.floor(n/Math.pow(10,p))%10;}
+  function ycol(p){return 'y'+Math.min(p,2);}
+  function pcol(p){return 'p'+Math.min(p,2);}
+  function ccol(p){return 'c'+Math.min(p,3);}   /* 進位色：進十 c1 … */
+
+  /* === 出題 === */
+  function makeQ(){
+    var m=state.mode,A,B,t=0;
+    do{
+      if(m==='add2'){A=rand(10,99);B=rand(10,99);}
+      else if(m==='add3'){A=rand(100,999);B=rand(100,999);}
+      else if(m==='sub2'){A=rand(10,99);B=rand(1,9);}
+      else if(m==='sub3'){A=rand(100,999);B=rand(10,99);}
+      else if(m==='mul1'){A=rand(11,99);B=rand(2,9);}
+      else if(m==='mul3x1'){A=rand(101,999);B=rand(2,9);}
+      else if(m==='div1'){B=rand(2,9);var dAt=rand(B,9),dAo=rand(0,9);A=dAt*10+dAo;}
+      else {A=rand(11,99);B=rand(1,9)*10+rand(1,9);}
+      t++;
+    }while(t<50 && last[m] && last[m].A===A && last[m].B===B);
+    last[m]={A:A,B:B};
+    if(m==='mul2')return buildMul(A,B);
+    if(m==='mul1'||m==='mul3x1')return buildMul1(A,B);
+    if(m==='sub2'||m==='sub3')return buildSub(A,B);
+    if(m==='div1')return buildDiv(A,B);
+    return buildAdd(A,B);
+  }
+  function buildAdd(A,B){
+    var sum=A+B, ncol=String(sum).length, carry=0, ans=[],cin=[],cout=[],p;
+    for(p=0;p<ncol;p++){var s=dig(A,p)+dig(B,p)+carry; ans[p]=s%10; cin[p]=carry; carry=s>=10?1:0; cout[p]=carry;}
+    var slots=[];
+    for(p=0;p<ncol;p++){
+      slots.push({id:'a'+p,kind:'ans',place:p,target:ans[p]});
+      if(p+1<ncol && cout[p]===1) slots.push({id:'c'+(p+1),kind:'carry',place:p+1,target:1});
+    }
+    slots.forEach(function(s){s.val=null;s.lock=false;s.bad=false;});
+    return {type:'add',A:A,B:B,sum:sum,ncol:ncol,ans:ans,cin:cin,cout:cout,slots:slots};
+  }
+  /* 減法（借位寫式 r9.1）：跟課本次序 —— 先劃走上一位（借出，變細一個），
+     再劃走呢一位（加十），先至寫答案。每一步係一格「要TAKE ACTION」嘅位置。 */
+  function buildSub(A,B){
+    var ncol=String(A).length, p;
+    var Adig=[],Bdig=[]; for(p=0;p<ncol;p++){Adig[p]=dig(A,p);Bdig[p]=dig(B,p);}
+    var eff=Adig.slice();                 /* 每位嘅「現時有效值」 */
+    var annos=[]; for(p=0;p<ncol;p++)annos[p]=[];   /* 每位上方要寫嘅細字（順序）*/
+    var slots=[], ans=[];
+    for(p=0;p<ncol;p++){
+      var top=eff[p];
+      if(top<Bdig[p]){                    /* 唔夠減 → 借十 */
+        var beforeR=eff[p+1];             /* 1) 劃走上一位，變細一個 */
+        eff[p+1]=beforeR-1; annos[p+1].push(eff[p+1]);
+        slots.push({id:'xr'+p,kind:'cross',act:'reduce',place:p+1,fromDigit:beforeR,val:eff[p+1]});
+        var beforeA=eff[p];               /* 2) 劃走呢一位，加十 */
+        eff[p]=beforeA+10; annos[p].push(eff[p]);
+        slots.push({id:'xa'+p,kind:'cross',act:'add',place:p,fromDigit:beforeA,val:eff[p]});
+        top=eff[p];
+      }
+      ans[p]=top-Bdig[p];                 /* 3) 寫答案 */
+      slots.push({id:'a'+p,kind:'ans',place:p,target:ans[p]});
+    }
+    slots.forEach(function(s){s.val=(s.kind==='cross'?s.val:null);s.lock=false;s.bad=false;});
+    return {type:'sub',A:A,B:B,diff:A-B,ncol:ncol,Adig:Adig,Bdig:Bdig,annos:annos,ans:ans,slots:slots};
+  }
+  /* 除法（雙位除單位，長除法）：先十位，帶低個位再分一次 */
+  function buildDiv(A,B){
+    var At=Math.floor(A/10), Ao=A%10;
+    var qt=Math.floor(At/B), rt=At-qt*B;
+    var combined=rt*10+Ao;
+    var qo=Math.floor(combined/B), ro=combined-qo*B;
+    var slots=[
+      {id:'qt',kind:'ans',target:qt},
+      {id:'rt',kind:'ans',target:rt},
+      {id:'qo',kind:'ans',target:qo},
+      {id:'ro',kind:'ans',target:ro}
+    ];
+    slots.forEach(function(s){s.val=null;s.lock=false;s.bad=false;});
+    return {type:'div',A:A,B:B,At:At,Ao:Ao,qt:qt,rt:rt,combined:combined,qo:qo,ro:ro,quot:qt*10+qo,slots:slots};
+  }
+  /* 部分積逐位：digit + {plain,red}（red＝乘法途中「進」上嚟嘅，放最上；最高位補寫嘅用地方色）*/
+  function ppComp(A,b){
+    var lenA=String(A).length,c=0,comps=[],digits=[],p,raw,d,red;
+    for(p=0;p<lenA;p++){raw=dig(A,p)*b+c;d=raw%10;red=p===0?0:Math.min(c,d);
+      comps.push({plain:d-red,red:red});digits.push(d);c=Math.floor(raw/10);}
+    while(c>0){d=c%10;comps.push({plain:d,red:0});digits.push(d);c=Math.floor(c/10);}
+    return {digits:digits,comps:comps,len:digits.length};
+  }
+  /* 小步 marks 流程（req 2/3）：A0×b 寫細字t1＋大字o1；A1×b 寫細字t2、o2；
+     加總每欄細字→寫大字→細字劃走；加總滿十黃色細字1自動出現 */
+  /* 通用 d 位 × 1 位 小步流程（req 3：可 2 位或 3 位）*/
+  function genPPn(A,b,shift,bigPref,mkPref,bigKind){
+    var Ln=String(A).length,a=[],m=[],o=[],t=[],i;
+    for(i=0;i<Ln;i++){a[i]=dig(A,i);m[i]=a[i]*b;o[i]=m[i]%10;t[i]=Math.floor(m[i]/10);}
+    var anyCarry=false;for(i=0;i<Ln;i++)if(t[i]>0)anyCarry=true;
+    var slots=[],marks=[],autos=[];
+    var BID=function(pl){return bigPref+'b'+pl;};
+    function big(pl,target){slots.push({id:BID(pl),kind:bigKind,place:pl+shift,target:target});}
+    function mk(id,pl,target,cls){slots.push({id:id,kind:'mk',place:pl+shift,target:target});
+      marks.push({id:id,place:pl+shift,target:target,cls:cls,xdep:BID(pl)});}
+    if(!anyCarry){for(i=0;i<Ln;i++)big(i,o[i]);
+      return {slots:slots,marks:marks,autos:autos,route:'direct',bigPref:bigPref,mkPref:mkPref,shift:shift,val:A*b};}
+    if(t[0]>0)mk(mkPref+'t0',1,t[0],'mkr');
+    big(0,o[0]);
+    for(i=1;i<Ln;i++){
+      if(t[i]>0)mk(mkPref+'t'+i,i+1,t[i],'mkb');
+      mk(mkPref+'o'+i,i,o[i],'mkb');
+    }
+    var carry=0,p;
+    for(p=1;p<=Ln;p++){
+      if(carry>0)autos.push({place:p+shift,val:carry,after:BID(p-1),xdep:BID(p)});
+      var contrib=carry;
+      if(p<=Ln-1)contrib+=o[p];
+      if(p-1>=0&&p-1<=Ln-1&&t[p-1]>0)contrib+=t[p-1];
+      if(p<Ln||contrib>0)big(p,contrib%10);
+      carry=Math.floor(contrib/10);
+    }
+    return {slots:slots,marks:marks,autos:autos,route:'marks',bigPref:bigPref,mkPref:mkPref,shift:shift,val:A*b};
+  }
+  function buildMul(A,B){
+    var Ao=A%10,At=(A/10|0),Bo=B%10,Bt=(B/10|0);
+    var pp1=A*Bo, pp2=A*Bt, prod=A*B, ncol=String(prod).length;
+    var P1=ppComp(A,Bo), P2=ppComp(A,Bt);
+    var G1=genPPn(A,Bo,0,'q','u','pp1'), G2=genPPn(A,Bt,1,'w','v','pp2');
+    var slots=G1.slots.concat(G2.slots),p;
+    var cin=0,scin=[];
+    for(p=0;p<ncol;p++){
+      scin[p]=cin;
+      var d1=p<P1.len?P1.digits[p]:0, d2=(p>=1&&p-1<P2.len)?P2.digits[p-1]:0, s=d1+d2+cin;
+      slots.push({id:'a'+p,kind:'ans',place:p,target:s%10});
+      if(s>=10){slots.push({id:'s'+(p+1),kind:'scarry',place:p+1,target:1});cin=1;}else cin=0;
+    }
+    slots.forEach(function(x){x.val=null;x.lock=false;x.bad=false;});
+    return {type:'mul',A:A,B:B,Ao:Ao,At:At,Bo:Bo,Bt:Bt,pp1:pp1,pp2:pp2,prod:prod,ncol:ncol,
+      P1:P1,P2:P2,G1:G1,G2:G2,scin:scin,slots:slots};
+  }
+  function buildMul1(A,B){
+    var prod=A*B, ncol=String(prod).length;
+    var P1=ppComp(A,B);
+    var G1=genPPn(A,B,0,'q','u','pp1');
+    var slots=G1.slots.slice();
+    slots.forEach(function(x){x.val=null;x.lock=false;x.bad=false;});
+    return {type:'mul1',A:A,B:B,Bo:B,prod:prod,ncol:ncol,P1:P1,G1:G1,slots:slots};
+  }
+  function slotById(id){var s=state.q.slots;for(var i=0;i<s.length;i++)if(s[i].id===id)return s[i];return null;}
+  function firstOpen(){var s=state.q.slots;for(var i=0;i<s.length;i++)if(!s[i].lock)return s[i];return null;}
+  function L(id){var s=slotById(id);return !!(s&&s.lock);}
+
+  /* sound */
+  function ctx(){if(!audioCtx){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}return audioCtx;}
+  function tone(f,dur,type,vol){
+    if(!state.sound||!ctx())return;var t0=audioCtx.currentTime;
+    (f.length?f:[f]).forEach(function(fr,i){var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type=type||'sine';o.frequency.value=fr;o.connect(g);g.connect(audioCtx.destination);
+      var s=t0+i*dur;g.gain.setValueAtTime(0.0001,s);g.gain.exponentialRampToValueAtTime(vol||0.18,s+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,s+dur);o.start(s);o.stop(s+dur);});
+  }
+  function blip(){tone([720,960],0.06,'square',0.13);}
+  var sndYay=function(){tone([523,659,784,1047],0.13,'triangle');};
+  var sndBad=function(){tone([220,180],0.14,'sawtooth');};
+  var sndCarry=function(){tone([392,523,659,880],0.09,'triangle',0.2);};
+
+  /* === 加法方塊 === */
+  function colBlocks(){
+    var q=state.q, cols=[], p;
+    for(p=0;p<q.ncol;p++){
+      var hasCin = p>0 && q.cout[p-1]===1;
+      var revealed = (p===0) || (hasCin ? L('c'+p) : L('a'+(p-1)));
+      var carriedOut = (p+1<q.ncol && q.cout[p]===1) ? L('c'+(p+1)) : false;
+      if(!revealed){cols[p]={list:[]};continue;}
+      if(carriedOut){
+        var rl=[]; for(var i=1;i<=q.ans[p];i++) rl.push({c:pcol(p),n:i});
+        cols[p]={list:rl,rest:true,restN:q.ans[p]};continue;
+      }
+      var ap=dig(q.A,p), bp=dig(q.B,p), list=[], n=0, i, j;
+      for(i=1;i<=ap;i++) list.push({c:ycol(p),n:++n});
+      for(j=1;j<=bp;j++) list.push({c:pcol(p),n:++n});
+      if(hasCin) list.push({c:ccol(p),n:++n});   /* 紅色進位放最上（req 3）*/
+      cols[p]={list:list};
+    }
+    return cols;
+  }
+  function brick(b,pop){return '<div class="brick '+b.c+(pop?' popin':'')+'">'+b.n+'</div>';}
+  function stack(colObj,ready,popTop){
+    if(colObj.rest){
+      var h='<div class="rest">',i;
+      for(i=colObj.list.length-1;i>=0;i--)h+=brick(colObj.list[i]);
+      return h+'<span class="caprest">餘 '+colObj.restN+'</span></div>';
+    }
+    var list=colObj.list,n=list.length,h='',i;
+    if(n===0)return '';
+    if(n>=10){
+      for(i=n-1;i>=10;i--)h+=brick(list[i], popTop&&i===n-1);
+      if(n>10)h+='<div class="tenmark"><span>10</span></div>';
+      h+='<div class="tengroup'+(ready?' ready':'')+'"'+(ready?' data-carry="1"':'')+'>';
+      for(i=9;i>=0;i--)h+=brick(list[i]);
+      h+='<span class="cap10">一個十</span></div>';
+    }else{
+      for(i=n-1;i>=0;i--)h+=brick(list[i], popTop&&i===n-1);
+    }
+    return h;
+  }
+  var PN=['個','十','百','千'];
+  function placeName(p){return PN[p]||'';}
+  function activePlaceAdd(){var a=firstOpen();if(!a)return state.q.ncol-1;return a.place;}
+  function addCaption(){
+    var q=state.q,a=firstOpen();
+    if(!a)return '✓ 做完！';
+    if(a.kind==='carry')return placeName(a.place-1)+'位滿十！撳「一個十」進位';
+    var p=a.place, cin=(p>0&&q.cout[p-1]===1)?1:0;
+    var parts=(cin?'進位1 ＋ ':'')+dig(q.A,p)+' ＋ '+dig(q.B,p);
+    return placeName(p)+'位：'+parts+' ＝ ？　數一數方塊，填答案';
+  }
+
+  /* === 減法（借位寫式：劃走＋上方細字）r9.1 === */
+  function subRevealed(){                 /* 每位已完成嘅劃走次數 */
+    var q=state.q,r=[],p;
+    for(p=0;p<q.ncol;p++)r[p]=0;
+    q.slots.forEach(function(s){if(s.kind==='cross'&&s.lock)r[s.place]++;});
+    return r;
+  }
+  function subTop(p){                      /* 呢一位「而家有效值」＝答案＋減數 */
+    var q=state.q;return q.ans[p]+q.Bdig[p];
+  }
+  function subCaption(){
+    var q=state.q,a=firstOpen();
+    if(!a)return '✓ 做完！';
+    if(a.kind==='cross'){
+      if(a.act==='reduce')
+        return '① 借十：<b>撳一下</b>劃走 '+placeName(a.place)+'位（少一 → '+a.val+'）';
+      return '② <b>撳一下</b>劃走 '+placeName(a.place)+'位（加十 → '+a.val+'）';
+    }
+    return '③ '+placeName(a.place)+'位：'+subTop(a.place)+' － '+q.Bdig[a.place]+' ＝ ？';
+  }
+  function renderSub(){
+    var q=state.q,i,p;
+    var fo=firstOpen();
+    var cols=[]; for(i=q.ncol-1;i>=0;i--)cols.push(i);
+    var tmpl='var(--opw) repeat('+q.ncol+',var(--wcell))';
+    var revealed=subRevealed();
+    var maxAnno=0; for(p=0;p<q.ncol;p++)maxAnno=Math.max(maxAnno,q.annos[p].length);
+    var acp=fo?fo.place:q.ncol-1;
+    var activeCross=(fo&&fo.kind==='cross')?fo.place:-1;
+    var activeCrossId=(fo&&fo.kind==='cross')?fo.id:'';
+
+    var g='<div class="guides" style="grid-template-columns:'+tmpl+';column-gap:var(--cgap);"><div class="gsp"></div>';
+    cols.forEach(function(pp){g+='<div class="tube t'+Math.min(pp,3)+(pp===acp?' act':'')+'"></div>';});
+    g+='</div>';
+
+    var h='<div class="bgrid" style="grid-template-columns:'+tmpl+';gap:4px var(--cgap);">';
+    h+='<div class="gcap">'+subCaption()+'</div>';
+    /* 位名 個十百 */
+    h+='<div class="ph"></div>';
+    cols.forEach(function(pp){h+='<div class="ph big'+(pp===acp?' ac':'')+'">'+placeName(pp)+'</div>';});
+    /* 上方細字（借後新值）—— 最新嘅喺最上 */
+    for(var j=maxAnno-1;j>=0;j--){
+      h+='<div class="wcell op"></div>';
+      cols.forEach(function(pp){
+        var show=revealed[pp]>j, v=q.annos[pp][j];
+        var struck=(j<revealed[pp]-1);
+        var inner=(show&&v!==undefined)?'<span class="av'+(struck?' struck':'')+'">'+v+'</span>':'';
+        h+='<div class="subanno">'+inner+'</div>';
+      });
+    }
+    /* 被減數 A（劃走） */
+    h+='<div class="wcell op"></div>';
+    cols.forEach(function(pp){
+      var struck=revealed[pp]>=1, isAct=(pp===activeCross);
+      var cls='wcell a tile '+ycol(pp)+(struck?' struck':'')+(isAct?' flashact crossgo':'');
+      var attr=isAct?(' data-crossgo="'+activeCrossId+'"'):'';
+      h+='<div class="'+cls+'"'+attr+'>'+q.Adig[pp]+'</div>';
+    });
+    /* － 減數 B */
+    h+='<div class="wcell op big">－</div>';
+    cols.forEach(function(pp){var has=pp<String(q.B).length;h+='<div class="wcell a '+(has?'tile '+pcol(pp):'hd')+'">'+(has?q.Bdig[pp]:'')+'</div>';});
+    h+='<div class="hbar"></div>';
+    /* 答案 */
+    h+='<div class="wcell op"></div>';
+    cols.forEach(function(pp){h+='<div class="wcell">'+slotCell('a'+pp,'as','')+'</div>';});
+    h+='</div>';
+    $('canvas').innerHTML='<div class="gridwrap">'+g+h+'</div>';
+    positionLabels();
+  }
+
+  /* === 乘法直式（2A/2B 內嵌帶，數位對齊；相加時 2A 倒入 2B，滿十照舊進位）=== */
+  function slotIdx(id){var s=state.q.slots;for(var i=0;i<s.length;i++)if(s[i].id===id)return i;return -1;}
+  function sumReached(p){
+    var fo=firstOpen(); if(!fo)return true;
+    var ia=slotIdx('a'+p); if(ia<0)return false;
+    return slotIdx(fo.id)>=ia;
+  }
+  /* pp 階段：某 band 喺 place p 嘅方塊（只顯示已填嘅位）*/
+  function ppBlocksCol(P,shift,p,fam,pref){
+    var d=p-shift; if(d<0||d>=P.len)return [];
+    if(!L(pref+'b'+d))return [];
+    var comp=P.comps[d],list=[],n=0,i;
+    for(i=0;i<comp.plain;i++)list.push({c:fam(Math.min(p,2)),n:++n});
+    for(i=0;i<comp.red;i++)list.push({c:ccol(p),n:++n});   /* 紅＝乘法進上嚟，放最上 */
+    return list;
+  }
+  /* 相加階段：2A 倒入 2B 之後 place p 嘅合併方塊（紫底、黃上、進位紅最頂）*/
+  function mergedCol(p){
+    var q=state.q,list=[],n=0,i;
+    var d2c=(p>=1&&p-1<q.P2.len)?q.P2.comps[p-1]:{plain:0,red:0};
+    var d1c=(p<q.P1.len)?q.P1.comps[p]:{plain:0,red:0};
+    for(i=0;i<d2c.plain;i++)list.push({c:pcol(Math.min(p,2)),n:++n});
+    for(i=0;i<d2c.red;i++)list.push({c:ccol(p),n:++n});
+    for(i=0;i<d1c.plain;i++)list.push({c:ycol(Math.min(p,2)),n:++n});
+    for(i=0;i<d1c.red;i++)list.push({c:ccol(p),n:++n});
+    if(slotById('s'+p)&&L('s'+p))list.push({c:ccol(p),n:++n});  /* 相加進位（已飛到）*/
+    return list;
+  }
+  function bandHTML(which,tmpl,cols){
+    var q=state.q,fo=firstOpen();
+    var sumPhase=fo?(fo.kind==='ans'||fo.kind==='scarry'):true;
+    var gp=-1,phT=-1,readyP=-1;
+    if(fo){
+      if(fo.kind==='ans')gp=fo.place;
+      else if(fo.kind==='scarry'){gp=fo.place-1;readyP=fo.place-1;phT=fo.place;}
+    }
+    var lab= which==='A'
+      ? (q.type==='mul1'?'<b>方塊</b>'+q.A+' × '+q.Bo:'<b>2A</b>'+q.A+' × '+q.Bo)
+      : (sumPhase?'<b>相加</b>兩部方塊':'<b>2B</b>'+q.A+' × '+q.Bt+'（左移）');
+    var h='<div class="ppband"><div class="ppgrid" style="grid-template-columns:'+tmpl+';column-gap:var(--cgap);">';
+    h+='<div class="pblab">'+lab+'</div><div class="bspace"></div>';
+    cols.forEach(function(p){
+      var colObj={list:[]},ready=false,inner='';
+      if(which==='A'){
+        colObj = sumReached(p) ? {list:[]} : {list:ppBlocksCol(q.P1,0,p,ycol,'q')};
+      }else{
+        if(sumReached(p)){
+          var ml=mergedCol(p), co=slotById('s'+(p+1));
+          if(co&&co.lock){
+            var rem=ml.slice(10).map(function(b,k){return {c:b.c,n:k+1};});
+            colObj={list:rem,rest:true,restN:rem.length};
+          }else{colObj={list:ml};ready=(readyP===p);}
+        }else colObj={list:ppBlocksCol(q.P2,1,p,pcol,'w')};
+      }
+      inner=stack(colObj,ready,state.justCarried===p&&which==='B');
+      if(which==='B'&&p===phT)inner='<div class="carryph flash'+(p>=3?' d3':p>=2?' d2':'')+'"></div>'+inner;
+      h+='<div class="bcell'+((p===gp)?' grnbox':'')+'">'+inner+'</div>';
+    });
+    h+='</div></div>';
+    return h;
+  }
+  /* 非揭曉答案嘅指引（r5 req 2）：只講做乜嘢一步，唔顯示計算結果 */
+  function ppCaption(G,fo,bd){
+    var id=fo.id;
+    if(fo.kind==='mk'){
+      if(id.charAt(1)==='t')return '呢一格 × '+bd+'　有進位，寫細字（進位）';
+      return '呢一格 × '+bd+'　寫個位細字';
+    }
+    if(id===G.bigPref+'b0')return '個位 × '+bd+'　寫個位大字';
+    if(G.route==='direct')return '呢一格 × '+bd+'　寫大字';
+    return '加埋同一格嘅細字，寫大字（細字會劃走）';
+  }
+  function mulCaption(){
+    var q=state.q,a=firstOpen(),pc;
+    if(!a)return '✓ 完成！';
+    if(q.type==='mul1'){pc=ppCaption(q.G1,a,q.B);return pc||'';}
+    var c0=a.id.charAt(0);
+    if(c0==='u'||c0==='q'){pc=ppCaption(q.G1,a,q.Bo);if(pc)return '<b>2A</b>　'+pc;}
+    if(c0==='v'||c0==='w'){pc=ppCaption(q.G2,a,q.Bt);if(pc)return '<b>2B</b>　'+pc;}
+    var p=(a.kind==='scarry')?a.place-1:a.place;
+    return '相加 '+placeName(p)+'位：數一數下面方塊，'+(a.kind==='scarry'?'滿十撳「一個十」進位':'填答案');
+  }
+  /* 小步細字行：每欄嘅細字（紅／藍）＋加總黃色進位；大字填咗就劃走 */
+  function marksRow(G){
+    if(G.route!=='marks')return '';
+    var q=state.q,cols=[],i;
+    for(i=q.ncol-1;i>=0;i--)cols.push(i);
+    var h='<div class="wcell op"></div>';
+    cols.forEach(function(p){
+      var items=[];
+      G.marks.forEach(function(m){
+        if(m.place!==p)return;
+        var crossed=L(m.xdep);
+        items.push(slotCell(m.id,'mk',m.cls+(crossed?' mk-x':'')));
+      });
+      G.autos.forEach(function(au){
+        if(au.place!==p)return;
+        if(!L(au.after))return;
+        items.push('<span class="mky'+(L(au.xdep)?' mk-x':'')+'">'+au.val+'</span>');
+      });
+      items.reverse();
+      h+='<div class="mkrow">'+items.join('')+'</div>';
+    });
+    return h;
+  }
+  function mulSlotRowG(cols,kind,op){
+    var q=state.q;
+    var r='<div class="wcell op'+(op==='＋'?' big':'')+'">'+(op||'')+'</div>';
+    cols.forEach(function(p){
+      var found=null;
+      q.slots.forEach(function(s){if(s.kind===kind&&s.place===p)found=s;});
+      r+='<div class="wcell">'+(found?slotCell(found.id,'as',''):'')+'</div>';
+    });
+    return r;
+  }
+  function renderMul1(){
+    var q=state.q,fo=firstOpen(),i;
+    var ncol=q.ncol,cols=[];
+    for(i=ncol-1;i>=0;i--)cols.push(i);
+    var tmpl='var(--opw) repeat('+ncol+',var(--wcell))';
+    var acp=fo?fo.place:ncol-1;
+    var g='<div class="guides" style="grid-template-columns:'+tmpl+';column-gap:var(--cgap);"><div class="gsp"></div>';
+    cols.forEach(function(p){g+='<div class="tube t'+Math.min(p,3)+(p===acp?' act':'')+'"></div>';});
+    g+='</div>';
+    var h='<div class="bgrid" style="grid-template-columns:'+tmpl+';gap:4px var(--cgap);">';
+    h+='<div class="gcap">'+mulCaption()+'</div>';
+    h+='<div class="ph"></div>';cols.forEach(function(p){h+='<div class="ph big'+(p===acp?' ac':'')+'">'+placeName(p)+'</div>';});
+    h+='<div class="wcell op"></div>';
+    cols.forEach(function(p){var has=p<String(q.A).length;h+='<div class="wcell a '+(has?'tile wt':'hd')+'">'+(has?dig(q.A,p):'')+'</div>';});
+    h+='<div class="wcell op big">×</div>';
+    cols.forEach(function(p){h+=(p===0?'<div class="wcell a tile y1">'+q.B+'</div>':'<div class="wcell a hd"></div>');});
+    h+='<div class="hbar"></div>';
+    h+=bandHTML('A',tmpl,cols);
+    h+=marksRow(q.G1);
+    h+=mulSlotRowG(cols,'pp1','');
+    h+='</div>';
+    $('canvas').innerHTML='<div class="gridwrap">'+g+h+'</div>';
+    positionLabels();
+  }
+  function renderMul(){
+    var q=state.q,fo=firstOpen(),i;
+    var ncol=q.ncol,cols=[];
+    for(i=ncol-1;i>=0;i--)cols.push(i);
+    var tmpl='var(--opw) repeat('+ncol+',var(--wcell))';
+    var acp=fo?fo.place:ncol-1;
+    var g='<div class="guides" style="grid-template-columns:'+tmpl+';column-gap:var(--cgap);"><div class="gsp"></div>';
+    cols.forEach(function(p){g+='<div class="tube t'+Math.min(p,3)+(p===acp?' act':'')+'"></div>';});
+    g+='</div>';
+    function mulSlotRow(kind,op){
+      var r='<div class="wcell op'+(op==='＋'?' big':'')+'">'+(op||'')+'</div>';
+      cols.forEach(function(p){
+        var found=null;
+        q.slots.forEach(function(s){if(s.kind===kind&&s.place===p)found=s;});
+        r+='<div class="wcell">'+(found?slotCell(found.id,'as',''):'')+'</div>';
+      });
+      return r;
+    }
+    var h='<div class="bgrid" style="grid-template-columns:'+tmpl+';gap:4px var(--cgap);">';
+    h+='<div class="gcap">'+mulCaption()+'</div>';
+    h+='<div class="ph"></div>';cols.forEach(function(p){h+='<div class="ph big'+(p===acp?' ac':'')+'">'+placeName(p)+'</div>';});
+    /* A 行：白底（req 2）*/
+    h+='<div class="wcell op"></div>';
+    cols.forEach(function(p){var has=p<String(q.A).length;h+='<div class="wcell a '+(has?'tile wt':'hd')+'">'+(has?dig(q.A,p):'')+'</div>';});
+    /* × B 行：個位黃（→2A）、十位紫（→2B）（req 3）*/
+    h+='<div class="wcell op big">×</div>';
+    cols.forEach(function(p){
+      if(p===0)h+='<div class="wcell a tile y1">'+q.Bo+'</div>';
+      else if(p===1)h+='<div class="wcell a tile p1">'+q.Bt+'</div>';
+      else h+='<div class="wcell a hd"></div>';
+    });
+    h+='<div class="hbar"></div>';
+    /* PANE 2A / 2B（對齊數位）*/
+    h+=bandHTML('A',tmpl,cols);
+    h+=bandHTML('B',tmpl,cols);
+    /* 小步細字＋大字（req 2/3）*/
+    h+=marksRow(q.G1);
+    h+=mulSlotRow('pp1','');
+    h+=marksRow(q.G2);
+    h+=mulSlotRow('pp2','＋');
+    h+='<div class="hbar"></div>';
+    /* 相加進位行（滿十照舊進位）*/
+    h+='<div class="wcell op"></div>';
+    cols.forEach(function(p){var c='';if(slotById('s'+p))c=slotCell('s'+p,'cy',(p>=3?'d3':p>=2?'d2':''));h+='<div class="wcell cry"><div class="crywrap">'+c+'</div></div>';});
+    h+=mulSlotRow('ans','');
+    h+='</div>';
+    $('canvas').innerHTML='<div class="gridwrap">'+g+h+'</div>';
+    positionLabels();
+  }
+
+  /* === 除法（長除法：十位 → 帶低個位）=== */
+  function divCaption(){
+    var q=state.q,a=firstOpen();
+    if(!a)return '✓ 做完！';
+    if(a.id==='qt')return '十位：'+q.At+' ÷ '+q.B+'　夠分幾多份？';
+    if(a.id==='rt')return placeName(1)+'位分完，仲餘幾多？（'+q.At+' － '+(q.qt*q.B)+'）';
+    if(a.id==='qo')return '帶低個位變　'+q.combined+'　；'+q.combined+' ÷ '+q.B+'　夠分幾多份？';
+    return '最後仲餘幾多？（'+q.combined+' － '+(q.qo*q.B)+'）';
+  }
+  function renderDiv(){
+    var q=state.q,h='<div class="divwrap">';
+    h+='<div class="gcap">'+divCaption()+'</div>';
+    h+='<div class="divouter">';
+    h+='<div class="divB tile">'+q.B+'</div>';
+    h+='<div class="divright">';
+    h+='<div class="divrow">';
+    h+='<div class="dcell">'+slotCell('qt','as','')+'</div>';
+    h+='<div class="dcell">'+slotCell('qo','as','')+'</div>';
+    h+='</div>';
+    h+='<div class="divbracket">';
+    h+='<div class="divrow">';
+    h+='<div class="dcell tile" style="background:var(--y1);color:#5a3800">'+q.At+'</div>';
+    h+='<div class="dcell tile" style="background:var(--y0);color:#6a4a00">'+q.Ao+'</div>';
+    h+='</div>';
+    h+='<div class="divrow">';
+    h+='<div class="dcell small">'+(L('qt')?('－'+(q.qt*q.B)):'')+'</div>';
+    h+='<div class="dcell"></div>';
+    h+='</div>';
+    h+='<div class="divrow">';
+    h+='<div class="dcell">'+slotCell('rt','as','')+'</div>';
+    h+='<div class="dcell"></div>';
+    h+='</div>';
+    h+='<div class="divrow">';
+    h+='<div class="dcell wide">'+(L('rt')?('↓ 帶低變　'+q.combined):'')+'</div>';
+    h+='</div>';
+    h+='<div class="divrow">';
+    h+='<div class="dcell small">'+(L('qo')?('－'+(q.qo*q.B)):'')+'</div>';
+    h+='<div class="dcell"></div>';
+    h+='</div>';
+    h+='<div class="divrow">';
+    h+='<div class="dcell">'+slotCell('ro','as','')+'</div>';
+    h+='<div class="dcell"></div>';
+    h+='</div>';
+    h+='</div>'; /* divbracket */
+    h+='</div>'; /* divright */
+    h+='</div>'; /* divouter */
+    h+='</div>'; /* divwrap */
+    $('canvas').innerHTML=h;
+    positionLabels();
+  }
+
+  function positionLabels(){
+    var lab=$('p2lab');
+    var showFor=(state.mode==='add2'||state.mode==='add3');
+    if(!showFor){if(lab)lab.style.display='none';return;}
+    var board=$('board'),sep=board.querySelector('.hbar.sep');
+    if(!sep||!lab){if(lab)lab.style.display='none';return;}
+    var br=board.getBoundingClientRect(),sr=sep.getBoundingClientRect();
+    var top=sr.top-br.top-2; if(top>0){lab.style.top=top+'px';lab.style.display='block';}
+  }
+  function slotCell(id,kind,extra){
+    var s=slotById(id);if(!s)return '';
+    var a=firstOpen(),act=(!state.solved&&a&&a.id===id);
+    var bright=(act&&(state.mode==='sub2'||state.mode==='sub3'));   /* 減法：要輸入嗰格更加鮮明地閃住 */
+    var cls='slot '+kind+(extra?' '+extra:'')+' '+(s.lock?'good':(s.bad?'bad':(s.val===null?'empty':'')))+(act?' active':'')+(bright?' flashact':'');
+    return '<button class="'+cls+'" data-slot="'+id+'">'+(s.val===null?'?':s.val)+'</button>';
+  }
+  function ansColorAdd(p){var q=state.q;
+    if(p===q.ncol-1 && q.cout[p-1]===1 && dig(q.A,p)===0 && dig(q.B,p)===0) return 'g'+Math.min(p,3); /* 最高位＝進位（紅）*/
+    var carriedOut=(p+1<q.ncol&&q.cout[p]===1);
+    return carriedOut?('g'+Math.min(p,1)):'an';  /* 有進位→餘數紫(g0/g1)，冇→中性 */
+  }
+
+  function renderAdd(){
+    var q=state.q,B=colBlocks(),a=firstOpen(),i;
+    var phTarget=-1,readySrc=-1;
+    if(a&&a.kind==='carry'){phTarget=a.place;readySrc=a.place-1;}
+    var ac=activePlaceAdd(),cols=[];
+    for(i=q.ncol-1;i>=0;i--)cols.push(i);
+    var tmpl='var(--opw) repeat('+q.ncol+',var(--wcell))';
+    var g='<div class="guides" style="grid-template-columns:'+tmpl+';column-gap:var(--cgap);"><div class="gsp"></div>';
+    cols.forEach(function(p){g+='<div class="tube t'+Math.min(p,3)+(p===ac?' act':'')+'"></div>';});
+    g+='</div>';
+    var h='<div class="bgrid" style="grid-template-columns:'+tmpl+';gap:4px var(--cgap);">';
+    h+='<div class="bspace"></div>';
+    cols.forEach(function(p){
+      var inner=stack(B[p], readySrc===p, state.justCarried===p);
+      if(p===phTarget && B[p].list.length===0){
+        inner='<div class="carryph flash'+(p>=3?' d3':p>=2?' d2':'')+'"></div>'+inner;
+      }
+      h+='<div class="bcell">'+inner+'</div>';
+    });
+    h+='<div class="gcap">'+addCaption()+'</div>';
+    h+='<div class="hbar sep"></div>';
+    h+='<div class="ph"></div>';
+    cols.forEach(function(p){h+='<div class="ph big'+(p===ac?' ac':'')+'">'+placeName(p)+'</div>';});
+    h+='<div class="wcell op"></div>';
+    cols.forEach(function(p){var id='c'+p,c='';if(slotById(id))c=slotCell(id,'cy',(p>=3?'d3':p>=2?'d2':''));h+='<div class="wcell cry"><div class="crywrap">'+c+'</div></div>';});
+    h+='<div class="wcell op"></div>';
+    cols.forEach(function(p){var d=dig(q.A,p),has=p<String(q.A).length;h+='<div class="wcell a '+(has?'tile '+ycol(p):'hd')+'">'+(has?d:'')+'</div>';});
+    h+='<div class="wcell op big">＋</div>';
+    cols.forEach(function(p){var d=dig(q.B,p),has=p<String(q.B).length;h+='<div class="wcell a '+(has?'tile '+pcol(p):'hd')+'">'+(has?d:'')+'</div>';});
+    h+='<div class="hbar"></div>';
+    h+='<div class="wcell op"></div>';
+    cols.forEach(function(p){h+='<div class="wcell">'+slotCell('a'+p,'as',ansColorAdd(p))+'</div>';});
+    h+='</div>';
+    $('canvas').innerHTML='<div class="gridwrap">'+g+h+'</div>';
+    positionLabels();
+  }
+
+  function render(){
+    if(state.mode==='mul2')renderMul();
+    else if(state.mode==='mul1'||state.mode==='mul3x1')renderMul1();
+    else if(state.mode==='sub2'||state.mode==='sub3')renderSub();
+    else if(state.mode==='div1')renderDiv();
+    else renderAdd();
+    updateChrome();
+  }
+  function updateChrome(){
+    SCK.forEach(function(m){$('ok-'+m).textContent=state.score[m].ok;$('no-'+m).textContent=state.score[m].no;});
+    document.querySelectorAll('.sc').forEach(function(e){e.classList.toggle('on',e.dataset.m===state.mode);});
+  }
+  function setStepMsg(){
+    var q=state.q,a=firstOpen();if(!a)return;
+    if(q.type==='mul'||q.type==='mul1'){
+      if(a.kind==='scarry')setMsg(placeName(a.place-1)+'位滿十！撳「一個十」飛去'+placeName(a.place)+'位（或按 1）','tip');
+      else setMsg('睇上面問題，數一數，填答案','tip');
+      return;
+    }
+    if(q.type==='sub'){
+      if(a.kind==='cross'){
+        if(a.act==='reduce')setMsg('借十！撳一下劃走 '+placeName(a.place)+'位 嘅 '+a.fromDigit+'，變做 '+a.val,'tip');
+        else setMsg(placeName(a.place)+'位唔夠減，撳一下劃走 '+a.fromDigit+'，借十變做 '+a.val,'tip');
+      }else{
+        setMsg(placeName(a.place)+'位：'+subTop(a.place)+' － '+q.Bdig[a.place]+' ＝ ？','tip');
+      }
+      return;
+    }
+    if(q.type==='div'){
+      if(a.id==='qt')setMsg('十位：'+q.At+' ÷ '+q.B+' ＝ ？','tip');
+      else if(a.id==='rt')setMsg('十位餘數：'+q.At+' － '+(q.qt*q.B)+' ＝ ？','tip');
+      else if(a.id==='qo')setMsg('帶低個位：'+q.combined+' ÷ '+q.B+' ＝ ？','tip');
+      else setMsg('最後餘數：'+q.combined+' － '+(q.qo*q.B)+' ＝ ？','tip');
+      return;
+    }
+    if(a.kind==='carry')setMsg(placeName(a.place-1)+'位滿十！撳「一個十」飛去'+placeName(a.place)+'位','tip');
+    else setMsg(placeName(a.place)+'位：'+(a.place>0&&q.cout[a.place-1]===1?'進位1 ＋ ':'')+dig(q.A,a.place)+' ＋ '+dig(q.B,a.place)+' ＝ ？','tip');
+  }
+
+  /* === 輸入 === */
+  function winTimer(){var qr=state.q;chirpTimers.push(setTimeout(function(){if(state.solved||state.q!==qr)return;win();},340));}
+  function afterAdvance(){var nx=firstOpen();if(!nx){setMsg('',' ');winTimer();}else setStepMsg();}
+  function flyCarry(recvPlace){
+    var tg=document.querySelector('.bcell .tengroup');
+    if(!tg){finishCarry(recvPlace);return;}
+    state.animating=true;tg.classList.remove('ready');tg.classList.add('flying');
+    chirpTimers.push(setTimeout(function(){state.animating=false;finishCarry(recvPlace);},470));
+  }
+  function finishCarry(recvPlace){state.justCarried=recvPlace;render();state.justCarried=-1;afterAdvance();}
+  function putDigit(d){
+    if(state.solved||state.animating)return;
+    if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}
+    var s=firstOpen();if(!s)return;
+    if(s.kind==='cross'){                 /* 呢一步係「劃走」—— 要撳板上面閃住嗰格，唔係打數字 */
+      setMsg('呢一步要<b>撳一下</b>閃住嗰格劃走 ✂️','tip');return;
+    }
+    if(d===s.target){
+      s.val=d;s.lock=true;s.bad=false;
+      if(s.kind==='carry'||s.kind==='scarry'){
+        var cel=document.querySelector('.slot[data-slot="'+s.id+'"]');
+        if(cel){cel.textContent='1';cel.classList.remove('bad','empty','active');cel.classList.add('good');}
+        sndCarry();flyCarry(s.place);return;
+      }
+      blip();render();afterAdvance();
+    }else{
+      s.val=d;s.bad=true;state.wrongQ=true;sndBad();render();setMsg(pick(MSG_PART),'bad');
+      retryTimer=setTimeout(function(){if(state.solved)return;s.val=null;s.bad=false;render();setStepMsg();},780);
+    }
+  }
+  /* 「劃走」動作：撳一下閃住嗰格完成一步（r9.1 減法）*/
+  function doCross(){
+    if(state.solved||state.animating)return;
+    if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}
+    var s=firstOpen();if(!s||s.kind!=='cross')return;
+    s.lock=true;s.bad=false;
+    sndCarry();render();afterAdvance();
+  }
+  function clearCur(){if(state.solved||state.animating)return;if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}var s=firstOpen();if(!s)return;s.val=null;s.bad=false;render();}
+  function win(){
+    clearChirps();state.solved=true;
+    var sc=state.score[state.mode]; if(state.wrongQ)sc.no++; else sc.ok++;
+    updateChrome();sndYay();
+    setMsg(pick(MSG_WIN),'good');
+    confetti();render();
+  }
+  function nextQ(){clearChirps();state.animating=false;state.justCarried=-1;state.wrongQ=false;state.q=makeQ();state.solved=false;setPrompt();render();setStepMsg();}
+  function showHint(){
+    if(state.mode==='mul1'||state.mode==='mul3x1'||state.mode==='mul2')return;  /* 乘數題無提示 */
+    if(state.solved||state.animating)return;var s=firstOpen();if(!s)return;
+    var el=document.querySelector('.slot[data-slot="'+s.id+'"]');if(!el)return;
+    el.textContent=s.target;el.classList.remove('empty');el.style.color='var(--coral)';
+    chirpTimers.push(setTimeout(function(){if(!s.lock)render();},1100));
+  }
+  function setPrompt(){
+    var m=state.mode, isMul=(m==='mul1'||m==='mul3x1'||m==='mul2'), isSub=(m==='sub2'||m==='sub3'), isDiv=(m==='div1');
+    $('hintBtn').style.display = isMul ? 'none' : '';   /* 乘數題暫時 hide 提示（req 2）*/
+    if(isMul){
+      $('prompt').textContent='跟直式做小步：進位寫細字（紅／藍）；同一格細字加埋，寫大字後細字就劃走 ✏️';
+      $('hint').innerHTML='<i style="background:var(--c2)"></i>紅細字＝乘法進位；<i style="background:#3b6fd6"></i>藍細字＝小步；<i style="background:#ffe45c"></i>黃細字＝加總進位。答啱變綠色 ✓';
+    }else if(isSub){
+      $('prompt').textContent='個位唔夠減要借十！跟次序：① 劃走上一位（佢少一）② 劃走呢一位（加十）③ 先寫答案 ✏️';
+      $('hint').innerHTML='<i style="background:#d0021b"></i>紅色斜線＝劃走；上面紅色細字＝借完之後嘅新數；<b style="color:#ff7a59">閃住嗰格</b>就係而家要做嘅一步（撳一下劃走，或喺鍵盤填答案）';
+    }else if(isDiv){
+      $('prompt').textContent='跟直式除法：夠分就寫商，唔夠就帶低下一個數位 ➗';
+      $('hint').innerHTML='先睇十位夠唔夠分，寫低「商」同「餘數」；將餘數同個位帶埋一齊再分一次！';
+    }else{
+      $('prompt').textContent='夠十，「一個十」飛去下一個數位，變一粒紅色方塊；餘數留低！';
+      $('hint').innerHTML='<i style="background:var(--y0)"></i>個 <i style="background:var(--y1)"></i>十 <i style="background:var(--y2)"></i>百（加數A）；<i style="background:var(--p0)"></i><i style="background:var(--p1)"></i><i style="background:var(--p2)"></i>加數B；<i style="background:var(--c1)"></i>進位（紅）🟦';
+    }
+  }
+
+  var MSG_WIN=['叻仔叻女！🎉','太厲害啦！⭐','完美！','好叻呀！💪','嘩～高手！🌈'];
+  var MSG_PART=['唔啱啊，再試吓！','差少少，加油！💕','慢慢諗，睇清楚！','記住每一位分開計！'];
+  function pick(a){return a[rand(0,a.length-1)];}
+  function setMsg(t,cls){var m=$('msg');m.innerHTML=t;m.className='msg'+(cls&&cls.trim()?' '+cls:'');}
+  function clearChirps(){chirpTimers.forEach(clearTimeout);chirpTimers=[];if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}}
+  function confetti(){var cols=['#ffd76b','#f2a93e','#b6a1e6','#8768cf','#ff9776','#ee6146','#2fb673'];
+    for(var i=0;i<20;i++){(function(){var d=document.createElement('div');d.className='confetti';
+      d.style.left=rand(4,96)+'vw';d.style.background=cols[rand(0,cols.length-1)];
+      d.style.animationDelay=(rand(0,6)/10)+'s';document.body.appendChild(d);
+      setTimeout(function(){d.remove();},2300);})();}}
+  function buildPad(){var d=[7,8,9,4,5,6,1,2,3,0],h='';
+    for(var i=0;i<d.length;i++)h+='<button class="num'+(d[i]===0?' zero':'')+'" data-d="'+d[i]+'">'+d[i]+'</button>';
+    $('pad').innerHTML=h;}
+  function setScale(v){state.scale=v;$('board').style.setProperty('--scale',v);positionLabels();}
+
+  $('pad').addEventListener('click',function(e){var b=e.target.closest('.num');if(b){b.blur();putDigit(+b.dataset.d);}});
+  $('canvas').addEventListener('click',function(e){
+    if(state.animating)return;
+    var xg=e.target.closest('[data-crossgo]');if(xg){doCross();return;}          /* 減法：撳一下劃走 */
+    var tz=e.target.closest('.tengroup[data-carry]');if(tz){putDigit(1);return;}   /* 加法：一個十進位 */
+    var sl=e.target.closest('.slot');if(sl&&!sl.classList.contains('good'))setStepMsg();
+  });
+  $('hintBtn').addEventListener('click',showHint);
+  $('clear').addEventListener('click',clearCur);
+  $('next').addEventListener('click',function(){this.blur();nextQ();});
+  document.querySelectorAll('.tab[data-mode]').forEach(function(t){t.addEventListener('click',function(){
+    t.blur();
+    document.querySelectorAll('.tab[data-mode]').forEach(function(x){x.classList.remove('on');});
+    t.classList.add('on');state.mode=t.dataset.mode;nextQ();});});
+  document.querySelectorAll('.pill[data-sz]').forEach(function(p){p.addEventListener('click',function(){
+    document.querySelectorAll('.pill[data-sz]').forEach(function(x){x.classList.remove('on');});
+    p.classList.add('on');setScale(parseFloat(p.dataset.sz));});});
+  $('sound').addEventListener('click',function(){state.sound=!state.sound;$('sound').textContent=state.sound?'🔊':'🔇';if(state.sound)blip();});
+  /* 慣用手鍵盤位置切換（r9.1）*/
+  function setHand(h){
+    state.hand=h;
+    var m=$('main');
+    m.classList.toggle('hand-left',h==='left');
+    m.classList.toggle('hand-right',h==='right');
+    $('handSwap').textContent=(h==='left'?'🖐️ 鍵盤喺左':'🖐️ 鍵盤喺右');
+    positionLabels();
+  }
+  $('handSwap').addEventListener('click',function(){this.blur();setHand(state.hand==='right'?'left':'right');});
+  window.addEventListener('resize',positionLabels);
+  document.addEventListener('keydown',function(e){
+    if(e.key>='0'&&e.key<='9'){e.preventDefault();putDigit(+e.key);}
+    else if(e.key==='Backspace'){e.preventDefault();clearCur();}
+    else if(e.key==='Enter'){e.preventDefault();nextQ();}
+    else if(e.key===' '){e.preventDefault();}
+  });
+
+  buildPad();setHand('right');setPrompt();nextQ();
+})();
+</script>
+</body>
+</html>
